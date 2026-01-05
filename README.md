@@ -7,5 +7,5 @@
 ## Setup
 
 1. Provide env variables.
-2. Provide constants in `ean_to_asin.py`.
-3. `python ean_to_asin.py`.
+2. Provide constants in the necessary script in `scripts/`.
+3. Provide files to work with in `input` directory of the project root.

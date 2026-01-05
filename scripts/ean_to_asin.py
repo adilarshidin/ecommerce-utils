@@ -10,10 +10,10 @@ load_dotenv()
 BASE_URL = "https://app.rocketsource.io"
 CONVERT_URL = urljoin(BASE_URL, "api/v3/convert")
 
-INPUT_CSV = "catalog.csv"
-SUCCESS_CSV = "asin_results.csv"
-FAILED_CSV = "failed_eans.csv"
-CHECKPOINT_FILE = "checkpoint.txt"
+INPUT_CSV = "../input/catalog.csv"
+SUCCESS_CSV = "../output/asin_results.csv"
+FAILED_CSV = "../output/failed_eans.csv"
+CHECKPOINT_FILE = "../input/checkpoint.txt"
 
 CSV_CHUNK_SIZE = 5000
 API_BATCH_SIZE = 20
