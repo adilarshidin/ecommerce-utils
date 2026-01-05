@@ -1,6 +1,7 @@
 uv.lock
 *.csv
 *.txt
+*.xlsx
 
 # Python-generated files
 __pycache__/

@@ -7,5 +7,5 @@
 ## Setup
 
 1. Provide env variables.
-2. Provide constants in `main.py`.
-3. `python main.py`.
+2. Provide constants in `ean_to_asin.py`.
+3. `python ean_to_asin.py`.
