@@ -11,7 +11,7 @@ with open(INPUT_FILE, newline="", encoding="utf-8") as f:
     fieldnames = reader.fieldnames
 
 # Count occurrences of NOMBRE
-nombre_counts = Counter(row["NOMBRE"].strip().lower() for row in rows)
+nombre_counts = Counter(row["NOMBRE"] for row in rows)
 
 # Filter rows where NOMBRE appears more than once
 duplicate_rows = [
