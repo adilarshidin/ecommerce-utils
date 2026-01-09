@@ -1,16 +1,15 @@
-import pandas
+import pandas as pd
 import random
 import time
 import os
 
 from playwright.sync_api import sync_playwright, Page
 
-
 input_catalog = "output/catalog_ready.csv"
 output_catalog = "output/filtered_catalog.csv"
 checkpoint_file = "input/filter_checkpoint.csv"
 
-df = pandas.read_csv(input_catalog)
+df = pd.read_csv(input_catalog)
 
 
 def check_page(page: Page, asin: str) -> bool:
@@ -37,23 +36,41 @@ def check_page(page: Page, asin: str) -> bool:
         return check
     return False
 
+
 with sync_playwright() as playwright:
     chromium = playwright.chromium
     instance = chromium.launch(headless=True)
     page = instance.new_page()
 
-    asins = df.head(5)
-    checkpoint = None
+    processed_asins = []
+
     if os.path.exists(checkpoint_file):
-        processed_asins = pandas.read_csv(checkpoint_file)["ASIN"].to_list()
+        processed_asins = pd.read_csv(checkpoint_file)["ASIN"].to_list()
+
+    if os.path.exists(output_catalog):
+        saved_asins = pd.read_csv(output_catalog)["ASIN"].to_list()
     else:
-        processed_asins = []
+        saved_asins = []
 
-    for index, item in asins["ASIN"].items():
-        if item in processed_asins:
+    for index, asin in df["ASIN"].items():
+        if asin in processed_asins:
             continue
-
+        print(f"Processing ASIN #{index}: {asin}")
         time.sleep(random.randrange(3, 7))
-        result = check_page(page, item)
+        passed = check_page(page, asin)
+        print(f"ASIN {'passed' if passed else 'did not pass'}")
+        pd.DataFrame([{"ASIN": asin}]).to_csv(
+            checkpoint_file,
+            mode="a",
+            header=not os.path.exists(checkpoint_file),
+            index=False
+        )
 
-        pandas.DataFrame([{"ASIN": item}]).to_csv(checkpoint_file, mode="a", header=not os.path.exists(checkpoint_file), index=False)
+        if passed and asin not in saved_asins:
+            pd.DataFrame([{"ASIN": asin}]).to_csv(
+                output_catalog,
+                mode="a",
+                header=not os.path.exists(output_catalog),
+                index=False
+            )
+            saved_asins.append(asin)
