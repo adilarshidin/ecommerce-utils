@@ -3,7 +3,7 @@ import json
 from bs4 import BeautifulSoup
 
 URL = "https://shopify.github.io/product-taxonomy/releases/unstable/"
-OUTPUT_FILE = "input/shopify_categories.json"
+OUTPUT_FILE = "templates/shopify_categories.json"
 
 response = requests.get(URL)
 soup = BeautifulSoup(response.content, "html.parser")

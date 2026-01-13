@@ -9,8 +9,8 @@ from mistralai import Mistral
 load_dotenv()
 
 INPUT_FILE = "output/asin_results.csv"
-OUTPUT_FILE = "output/translated_catalog_es.csv"
-CHECKPOINT_FILE = "input/translate_checkpoint.txt"
+OUTPUT_FILE = "output/translated_catalog.csv"
+CHECKPOINT_FILE = "checkpoints/translate_checkpoint.txt"
 TMP_OUTPUT_FILE = "output/.translated_catalog.tmp"
 
 BATCH_SIZE = 20
@@ -27,9 +27,16 @@ def translate_batch(names, mistral):
 You are given a list of product names from an Amazon catalog.
 
 Rules:
-- Translate each name to Spanish.
-- Use the product context to choose the most accurate translation.
-- Return ONLY a JSON array of strings in the same order.
+- Translate each product name to:
+  - English
+  - Spanish
+- Use the product context to choose the most accurate translations.
+- Return ONLY valid JSON in the following format:
+{{
+  "en": [...],
+  "es": [...]
+}}
+- Keep the same order.
 - No markdown, no explanations.
 
 Product names:
@@ -41,7 +48,8 @@ Product names:
         stream=False,
     )
 
-    return clean_json(res.choices[0].message.content)
+    data = clean_json(res.choices[0].message.content)
+    return data["en"], data["es"]
 
 
 def load_rows():
@@ -69,6 +77,11 @@ signal.signal(signal.SIGINT, handle_sigint)
 
 rows = load_rows()
 
+# Ensure target columns exist
+for row in rows:
+    row.setdefault("NOMBRE_EN", "")
+    row.setdefault("NOMBRE_ES", "")
+
 start_index = 0
 if os.path.exists(CHECKPOINT_FILE):
     with open(CHECKPOINT_FILE, "r", encoding="utf-8") as f:
@@ -84,10 +97,11 @@ with Mistral(api_key=os.getenv("MISTRAL_API_KEY", "")) as mistral:
         batch = rows[i : i + BATCH_SIZE]
         names = [row["NOMBRE"] for row in batch]
 
-        translated = translate_batch(names, mistral)
+        translated_en, translated_es = translate_batch(names, mistral)
 
-        for row, new_name in zip(batch, translated):
-            row["NOMBRE"] = new_name
+        for row, en_name, es_name in zip(batch, translated_en, translated_es):
+            row["NOMBRE_EN"] = en_name
+            row["NOMBRE_ES"] = es_name
 
         # Atomic write
         with open(TMP_OUTPUT_FILE, "w", newline="", encoding="utf-8") as f:

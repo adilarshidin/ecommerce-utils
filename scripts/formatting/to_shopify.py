@@ -9,11 +9,11 @@ from mistralai import Mistral
 # =========================
 load_dotenv()
 
-SHOPIFY_TEMPLATE_CSV = "input/shopify_template.csv"
+SHOPIFY_TEMPLATE_CSV = "templates/shopify_template.csv"
 PRODUCTS_CSV = "input/konus_catalog.csv"
-CATEGORY_JSON = "input/shopify_categories.json"
+CATEGORY_JSON = "templates/shopify_categories.json"
 OUTPUT_CSV = "output/konus_shopify.csv"
-CHECKPOINT_FILE = "input/konus_checkpoint.txt"
+CHECKPOINT_FILE = "checkpoints/konus_checkpoint.txt"
 
 MODEL = "mistral-large-latest"
 client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))

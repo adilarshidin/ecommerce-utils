@@ -2,6 +2,8 @@ uv.lock
 input/
 output/
 backups/
+checkpoints/
+templates/
 
 # Python-generated files
 __pycache__/
