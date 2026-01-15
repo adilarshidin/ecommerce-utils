@@ -30,9 +30,7 @@
 
     1) Convert txt to csv.
 
-    2) Scrape actual prices from Amazon because the downloaded listing reports contain incorrect prices.
-
-    3) Update using another csv.
+    2) Update using another csv.
 
 ## Tools needed
 
