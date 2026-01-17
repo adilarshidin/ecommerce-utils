@@ -1,3 +1,4 @@
+import re
 from openpyxl import load_workbook
 import pandas as pd
 from pathlib import Path
@@ -10,7 +11,7 @@ from mistralai import Mistral
 excel_path = "templates/konus.xlsm"
 sheet_name = "Plantilla"
 csv_path = "input/konus_catalog.csv"
-output_path = "output/amazon_konux.xlsm"
+output_path = "output/amazon_konus.xlsm"
 start_row = 6
 
 DIRECT_HEADERS = set([
@@ -24,6 +25,14 @@ DIRECT_HEADERS = set([
     "Descripción del producto",
     "Peso Artículo",
     "URL de la imagen principal",
+    "Tipo de identificador del producto",
+    "Estado del producto",
+    "Precio de venta recomendado (PVPR)",
+    "Tu precio EUR (Vender en Amazon, ES)",
+    "Precio de venta. EUR (Vender en Amazon, ES)",
+    "Grupo de la marina mercante (ES)",
+    "Tamaño del anillo",
+    "Tamaño"
 ])
 
 # ---------------- ENV ----------------
@@ -50,9 +59,16 @@ df = pd.read_csv(
 # ---------------- AMAZON HEADERS ----------------
 amazon_headers = [cell.value for cell in ws[4]]
 
-# ---------------- CLEAN ROW 6 ----------------
+# ---------------- CLEANERS ----------------
 for cell in ws[start_row]:
     cell.value = None
+
+def clean_price(price_str):
+    if not price_str:
+        return None
+    # Convert to string, remove all non-digit/non-dot characters
+    cleaned = re.sub(r"[^\d.]", "", str(price_str))
+    return cleaned
 
 # ---------------- LLM FUNCTION ----------------
 def extract_json(text: str) -> dict:
@@ -89,7 +105,10 @@ def direct_map(csv_row):
         "URL de la imagen principal": csv_row.get("Imagen_grande"),
         "Tipo de identificador del producto": "EAN",
         "Estado del producto": "Nuevo",
-        "Precio de venta recomendado (PVPR)": csv_row.get("PVP FINAL").strip("€").strip(),
+        "Precio de venta recomendado (PVPR)": clean_price(csv_row.get("PVP FINAL")),
+        "Tu precio EUR (Vender en Amazon, ES)": clean_price(csv_row.get("PVP FINAL")),
+        "Precio de venta. EUR (Vender en Amazon, ES)": clean_price(csv_row.get("PVP FINAL")),
+        "Grupo de la marina mercante (ES)": "Nueva plantilla Envios",
         "Tamaño del anillo": medidas
     }
 
@@ -154,7 +173,6 @@ for _, csv_row in df.iterrows():
             ws.cell(row=current_row, column=col_idx, value=value)
 
     current_row += 1
-    break  # keep for testing; remove to process all rows
 
 # ---------------- SAVE ----------------
 wb.save(output_path)
