@@ -1,5 +1,4 @@
 import re
-import logging
 import pandas as pd
 import json
 import os
@@ -25,15 +24,6 @@ load_dotenv()
 MISTRAL_API_TOKEN = os.getenv("MISTRAL_API_TOKEN")
 if not MISTRAL_API_TOKEN:
     raise RuntimeError("MISTRAL_API_TOKEN not found in environment")
-
-# ---------------- LOGGING ----------------
-Path(log_path).parent.mkdir(parents=True, exist_ok=True)
-logging.basicConfig(
-    filename=log_path,
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logging.info("Script started")
 
 # ---------------- LOAD FILES ----------------
 Path(output_path).parent.mkdir(parents=True, exist_ok=True)
@@ -78,15 +68,33 @@ def safe_dim(dims, key, subkey):
         return val.get(subkey)
     return None
 
+def complete_dim(dims, key):
+    """
+    Returns (value, unit) only if BOTH are present and non-null.
+    Otherwise returns (None, None).
+    """
+    val = dims.get(key)
+    if not isinstance(val, dict):
+        return None, None
+
+    value = val.get("value")
+    unit = val.get("unit")
+
+    if value is None or unit is None:
+        return None, None
+
+    return value, unit
+
 # ---------------- DIRECT MAP ----------------
 def direct_map(csv_row, enrichment):
-    weight = csv_row.get("PesoNeto")
+    weight = csv_row.get("PesoNeto", 0)
+    is_kg = False
     if isinstance(weight, str):
         if 'kg' in weight:
-            weight = weight.lower().replace("kg.", "").replace("kg", "").replace(",", ".").strip()
+            is_kg = True
+        weight = weight.lower().replace("kg.", "").replace("kg", "").replace("gr.", "").replace("gr", "").replace(",", "").strip()
+        if is_kg:
             weight = str(float(weight) * 1000)
-        else:
-            weight = weight.lower().replace("gr.", "").replace("gr", "").strip()
 
     medidas_raw = csv_row.get("Medidas")
     medidas = None
@@ -97,6 +105,7 @@ def direct_map(csv_row, enrichment):
     dims = enrichment.get("dimensions", {})
 
     browse_node = None
+    size = None
     product_type = enrichment.get("product_type")
     match product_type:
         case "RANGEFINDER":
@@ -112,11 +121,20 @@ def direct_map(csv_row, enrichment):
         case "TELESCOPE":
             browse_node = "Electrónica > Fotografía y videocámaras > Prismáticos, telescopios y óptica > Monoculares (930884031)"
         case "BINOCULAR":
-            browse_node = "Juguetes y juegos > Aprendizaje y educación > Óptica > Prismáticos (14525749031)"
+            browse_node = "Electrónica > Fotografía y videocámaras > Prismáticos, telescopios y óptica > Prismáticos (930885031)"
         case "FLASHLIGHT":
             browse_node = "Bricolaje y herramientas > Ferretería > Linternas y faroles de mano > Linternas (3053011031)"
+            size = "pequeño"
         case "NAVIGATION_COMPASS":
             browse_node = "Deportes y aire libre > Electrónica y dispositivos > Brújulas (2928776031)"
+
+    thickness_v, thickness_u = complete_dim(dims, "thickness")
+    height_v, height_u = complete_dim(dims, "height")
+    min_fd_v, min_fd_u = complete_dim(dims, "min_focal_distance")
+    pkg_len_v, pkg_len_u = complete_dim(dims, "package_length")
+    pkg_w_v, pkg_w_u = complete_dim(dims, "package_width")
+    pkg_h_v, pkg_h_u = complete_dim(dims, "package_height")
+    pkg_weight_v, pkg_weight_u = complete_dim(dims, "package_weight")
 
     return {
         "SKU": csv_row.get("EAN"),
@@ -125,17 +143,17 @@ def direct_map(csv_row, enrichment):
         "Marca": csv_row.get("Marca"),
         "Fabricante": "Konus",
         "Nombre Modelo": csv_row.get("Modelo"),
+        "Numero de modelo": enrichment.get("model_number"),
         "Nombre del producto": csv_row.get("Título_producto"),
         "Palabra clave genérica": csv_row.get("Descripción_corta"),
         "Descripción del producto": csv_row.get("Descripción_larga"),
         "Viñeta": enrichment.get("bullet"),
         "Nodos recomendados de búsqueda": browse_node,
-        "Tipo de producto": enrichment.get("product_type"),
-
+        "Tamaño": size,
+        "Tipo de producto": product_type,
         "Precio de venta recomendado (PVPR)": clean_price(csv_row.get("PVP FINAL")),
         "Tu precio EUR (Vender en Amazon, ES)": clean_price(csv_row.get("PVP FINAL")),
         "Precio de venta. EUR (Vender en Amazon, ES)": clean_price(csv_row.get("PVP FINAL")),
-
         "Estado del producto": "Nuevo",
         "Tipo de identificador del producto": "EAN",
         "Grupo de la marina mercante (ES)": "Nueva plantilla Envios",
@@ -144,37 +162,31 @@ def direct_map(csv_row, enrichment):
         "Número de Artículos": "1",
         "Número de cajas": "1",
         "Componentes Incluidos": "1 artículo",
-        "Numero de pieza": csv_row.get("Título_producto"),
-
+        "Numero de pieza": enrichment.get("part_number"),
         "Peso Artículo": weight,
         "Unidad de peso del artículo": "Gramos",
         "Tamaño del anillo": medidas,
-
-        "Grosor del artículo desde la parte delantera hasta la trasera": safe_dim(dims, "thickness", "value"),
-        "Unidad de altura del artículo": safe_dim(dims, "height", "unit"),
-        "Ancho del artículo de lado a lado": safe_dim(dims, "width", "value"),
-        "Unidad del ancho del artículo": safe_dim(dims, "width", "unit"),
-
+        "Grosor del artículo desde la parte delantera hasta la trasera": thickness_v,
+        "Unidad del grosor del artículo": thickness_u,
+        "Altura del artículo": height_v,
         "Aumento máximo": dims.get("max_magnification"),
-        "Distancia focal mínima": safe_dim(dims, "min_focal_distance", "value"),
-
-        "Longitud Paquete": safe_dim(dims, "package_length", "value"),
-        "Unidad de longitud del paquete": safe_dim(dims, "package_length", "unit"),
-        "Ancho Paquete": safe_dim(dims, "package_width", "value"),
-        "Unidad de anchura del paquete": safe_dim(dims, "package_width", "unit"),
-        "Altura Paquete": safe_dim(dims, "package_height", "value"),
-        "Unidad de altura del paquete": safe_dim(dims, "package_height", "unit"),
-        "Peso del paquete": safe_dim(dims, "package_weight", "value"),
-        "Unidad del peso del paquete": safe_dim(dims, "package_weight", "unit"),
-
-        "País de origen": enrichment.get("country_of_origin"),
+        "Distancia focal mínima": min_fd_v,
+        "Longitud Paquete": pkg_len_v,
+        "Unidad de longitud del paquete": pkg_len_u,
+        "Ancho Paquete": pkg_w_v,
+        "Unidad de anchura del paquete": pkg_w_u,
+        "Altura Paquete": pkg_h_v,
+        "Unidad de altura del paquete": pkg_h_u,
+        "Peso del paquete": pkg_weight_v,
+        "Unidad del peso del paquete": "Kilogramos",
         "Garantía de Producto": "2",
         "¿Se necesitan baterías?": "No",
         "Normativas sobre mercancías peligrosas": "No aplicable",
         "Riesgo del GDPR": "No hay información electrónica almacenada.",
         "URL de la imagen principal": csv_row.get("Imagen_grande"),
         "País de origen": "Italia",
-        "Nodos recomendados de búsqueda": enrichment.get("search_modes")
+        "Color": "negro",
+        "Mapa de color": "negro"
     }
 
 
@@ -209,13 +221,12 @@ Rules:
 - Choose EXACTLY ONE product type from the allowed list
 - Generate EXACTLY ONE factual bullet point
 - Infer values only if clearly implied, otherwise return null
-- Country must be a real country name in Spanish
-- Warranty must be concise (e.g. "2 años")
 - Units must be metric
 - Return ONLY valid JSON
 
 Allowed product types:
 {ALLOWED_PRODUCT_TYPES}
+Monoculars are to be categorized as TELESCOPE
 
 Product data:
 - Title: {csv_row.get("Título_producto")}
@@ -228,6 +239,8 @@ Return format:
 {{
   "product_type": "ONE_OF_THE_ALLOWED_VALUES",
   "bullet": "Short factual bullet",
+  "model_number": "Number of the model or the name of the product if model can not be deduced",
+  "part_number": "Can be product name but below 40 characters",
   "dimensions": {{
     "thickness": {{ "value": number|null, "unit": "cm"|null }},
     "height": {{ "value": number|null, "unit": "cm"|null }},
@@ -264,20 +277,15 @@ for idx, csv_row in df.iterrows():
     sku = csv_dict.get("EAN")
 
     if sku in processed_skus:
-        logging.info(f"Skipping SKU {sku}")
         current_row += 1
         continue
-
-    logging.info(f"Processing SKU {sku}")
 
     try:
         enrichment = classify_product_enrichment(csv_dict, mistral)
     except Exception as e:
-        logging.error(f"LLM failed for SKU {sku}: {e}")
         enrichment = {
             "product_type": None,
             "bullet": None,
-            "country_of_origin": None,
             "warranty": None,
             "dimensions": {}
         }
@@ -296,5 +304,4 @@ for idx, csv_row in df.iterrows():
     wb.save(output_path)
     current_row += 1
 
-logging.info(f"Amazon XLSM generated: {output_path}")
 print(f"Amazon XLSM generated: {output_path}")
