@@ -13,10 +13,6 @@ sheet_name = "Plantilla"
 csv_path = "input/konus_catalog.csv"
 output_path = "output/amazon_konus.xlsm"
 start_row = 6
-log_path = "logs/amazon_konus.log"
-checkpoint_dir = Path("checkpoints")
-checkpoint_dir.mkdir(parents=True, exist_ok=True)
-checkpoint_file = checkpoint_dir / "amazon_konus.json"
 
 # ---------------- ENV ----------------
 load_dotenv()
@@ -87,14 +83,26 @@ def complete_dim(dims, key):
 
 # ---------------- DIRECT MAP ----------------
 def direct_map(csv_row, enrichment):
-    weight = csv_row.get("PesoNeto", 0)
-    is_kg = False
-    if isinstance(weight, str):
-        if 'kg' in weight:
-            is_kg = True
-        weight = weight.lower().replace("kg.", "").replace("kg", "").replace("gr.", "").replace("gr", "").replace(",", "").strip()
+    weight = csv_row.get("PesoNeto")
+    if isinstance(weight, str) and weight.strip():
+        weight = weight.lower()
+        is_kg = "kg" in weight
+
+        weight = (
+            weight
+            .replace("kg.", "")
+            .replace("kg", "")
+            .replace("gr.", "")
+            .replace("gr", "")
+            .replace("r", "")
+            .replace(",", ".")
+            .strip()
+        )
+
+        weight = float(weight)
+
         if is_kg:
-            weight = str(float(weight) * 1000)
+            weight *= 1000
 
     medidas_raw = csv_row.get("Medidas")
     medidas = None
@@ -130,13 +138,15 @@ def direct_map(csv_row, enrichment):
 
     thickness_v, thickness_u = complete_dim(dims, "thickness")
     height_v, height_u = complete_dim(dims, "height")
+    width_v, width_u = complete_dim(dims, "width")
+    length_v, length_u = complete_dim(dims, "length")
     min_fd_v, min_fd_u = complete_dim(dims, "min_focal_distance")
     pkg_len_v, pkg_len_u = complete_dim(dims, "package_length")
     pkg_w_v, pkg_w_u = complete_dim(dims, "package_width")
     pkg_h_v, pkg_h_u = complete_dim(dims, "package_height")
     pkg_weight_v, pkg_weight_u = complete_dim(dims, "package_weight")
 
-    return {
+    formatted_entry = {
         "SKU": csv_row.get("EAN"),
         "SKU principal": csv_row.get("EAN"),
         "ID del producto": csv_row.get("EAN"),
@@ -166,9 +176,6 @@ def direct_map(csv_row, enrichment):
         "Peso Artículo": weight,
         "Unidad de peso del artículo": "Gramos",
         "Tamaño del anillo": medidas,
-        "Grosor del artículo desde la parte delantera hasta la trasera": thickness_v,
-        "Unidad del grosor del artículo": thickness_u,
-        "Altura del artículo": height_v,
         "Aumento máximo": dims.get("max_magnification"),
         "Distancia focal mínima": min_fd_v,
         "Longitud Paquete": pkg_len_v,
@@ -176,7 +183,7 @@ def direct_map(csv_row, enrichment):
         "Ancho Paquete": pkg_w_v,
         "Unidad de anchura del paquete": pkg_w_u,
         "Altura Paquete": pkg_h_v,
-        "Unidad de altura del paquete": pkg_h_u,
+        "Unidad de altura del paquete": "Centímetros",
         "Peso del paquete": pkg_weight_v,
         "Unidad del peso del paquete": "Kilogramos",
         "Garantía de Producto": "2",
@@ -186,16 +193,54 @@ def direct_map(csv_row, enrichment):
         "URL de la imagen principal": csv_row.get("Imagen_grande"),
         "País de origen": "Italia",
         "Color": "negro",
-        "Mapa de color": "negro"
+        "Mapa de color": "negro",
     }
+    match product_type:
+        case "FLASHLIGHT":
+            formatted_entry["Fuente Alimentación"] = "Batería"
+            formatted_entry["Etiquetado Eficiencia Energética UE"] = "A to G"
+            formatted_entry["Eficiencia"] = "A"
+            formatted_entry["Conteo de unidades"] = "1"
+            formatted_entry["Tipo de conteo de unidades"] = "unidad"
+            formatted_entry["¿Es frágil?"] = "No"
+            formatted_entry["Unidad de la altura"] = "Centímetros"
+            formatted_entry["Unidad de la longitud"] = "Centímetros"
+            formatted_entry["Unidad del ancho"] = "Centímetros"
+            formatted_entry["Unidad de altura del artículo"] = "Centímetros"
+            formatted_entry["Unidad de grosor del artículo"] = "Centímetros"
+            formatted_entry["Unidad del ancho del artículo"] = "Centímetros"
+        case "MAGNIFIER":
+            formatted_entry["¿Es frágil?"] = "No"
+            formatted_entry["Tamaño"] = "pequeño"
+        case "CAMERA_TRIPOD":
+            formatted_entry["Material"] = "Plástico"
+        case "NAVIGATION_COMPASS":
+            formatted_entry["Material"] = "Plástico"
+            formatted_entry["Seguridad Juguetes Edad EU Advertencia"] = "Ninguna advertencia aplicable"
+            formatted_entry["Advertencia No Requisito Edad EU DSJ"] = "Ninguna advertencia aplicable"
+        case "RANGEFINDER":
+            formatted_entry["Material"] = "Plástico"
+            formatted_entry["Tamaño"] = "pequeño"
+            formatted_entry["Seguridad Juguetes Edad EU Advertencia"] = "Ninguna advertencia aplicable"
+            formatted_entry["Advertencia No Requisito Edad EU DSJ"] = "Ninguna advertencia aplicable"
+        case "AIMING_SCOPE_SIGHT":
+            formatted_entry["Material"] = "Plástico"
+            formatted_entry["Tamaño"] = "pequeño"
+            if formatted_entry.get("Peso Artículo"):
+                formatted_entry["Peso Artículo"] = round(
+                    formatted_entry["Peso Artículo"] / 453.6, 2
+                )
+                formatted_entry["Unidad de peso del artículo"] = "Libras"
+            formatted_entry["Peso Artículo Unidad"] = "Libras"
+            formatted_entry["Seguridad Juguetes Edad EU Advertencia"] = "Ninguna advertencia aplicable"
+            formatted_entry["Nombre del departamento"] = "Adultos unisex"
+            formatted_entry["Advertencia No Requisito Edad EU DSJ"] = "Ninguna advertencia aplicable"
+        case "TELESCOPE":
+            formatted_entry["Unidad de grosor del artículo"] = "Centímetros"
+            formatted_entry["Unidad de altura del artículo"] = "Centímetros"
+            formatted_entry["Unidad del ancho del artículo"] = "Centímetros"
 
-
-# ---------------- CHECKPOINT ----------------
-if checkpoint_file.exists():
-    with open(checkpoint_file, "r") as f:
-        processed_skus = set(json.load(f))
-else:
-    processed_skus = set()
+    return formatted_entry
 
 # ---------------- LLM ----------------
 mistral = Mistral(api_key=MISTRAL_API_TOKEN)
@@ -245,6 +290,7 @@ Return format:
     "thickness": {{ "value": number|null, "unit": "cm"|null }},
     "height": {{ "value": number|null, "unit": "cm"|null }},
     "width": {{ "value": number|null, "unit": "cm"|null }},
+    "length": {{ "value": number|null, "unit": "cm"|null }},
     "max_magnification": number|null,
     "min_focal_distance": {{ "value": number|null, "unit": "cm"|null }},
     "package_length": {{ "value": number|null, "unit": "cm"|null }},
@@ -276,10 +322,6 @@ for idx, csv_row in df.iterrows():
     csv_dict = csv_row.to_dict()
     sku = csv_dict.get("EAN")
 
-    if sku in processed_skus:
-        current_row += 1
-        continue
-
     try:
         enrichment = classify_product_enrichment(csv_dict, mistral)
     except Exception as e:
@@ -296,10 +338,6 @@ for idx, csv_row in df.iterrows():
         value = mapped.get(header)
         if value is not None:
             ws.cell(row=current_row, column=col_idx, value=value)
-
-    processed_skus.add(sku)
-    with open(checkpoint_file, "w") as f:
-        json.dump(list(processed_skus), f)
 
     wb.save(output_path)
     current_row += 1
