@@ -3,6 +3,9 @@ import csv
 import re
 import json
 import signal
+import os
+from dotenv import load_dotenv
+from mistralai import Mistral
 from dotenv import load_dotenv
 from mistralai import Mistral
 
@@ -91,7 +94,7 @@ else:
     print("📄 Starting fresh translation...")
 
 
-with Mistral(api_key=os.getenv("MISTRAL_API_KEY", "")) as mistral:
+with Mistral(api_key=os.getenv("MISTRAL_API_TOKEN", "")) as mistral:
 
     for i in range(start_index, len(rows), BATCH_SIZE):
         batch = rows[i : i + BATCH_SIZE]
