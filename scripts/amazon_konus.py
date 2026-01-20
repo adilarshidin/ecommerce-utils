@@ -81,6 +81,9 @@ def complete_dim(dims, key):
 
     return value, unit
 
+def is_empty_or_zero(value):
+    return value in (None, "", 0, 0.0, "0")
+
 # ---------------- DIRECT MAP ----------------
 def direct_map(csv_row, enrichment):
     weight = csv_row.get("PesoNeto")
@@ -179,7 +182,6 @@ def direct_map(csv_row, enrichment):
         "Aumento máximo": dims.get("max_magnification"),
         "Distancia focal mínima": min_fd_v,
         "Longitud Paquete": pkg_len_v,
-        "Unidad de longitud del paquete": pkg_len_u,
         "Ancho Paquete": pkg_w_v,
         "Unidad de anchura del paquete": pkg_w_u,
         "Altura Paquete": pkg_h_v,
@@ -194,6 +196,11 @@ def direct_map(csv_row, enrichment):
         "País de origen": "Italia",
         "Color": "negro",
         "Mapa de color": "negro",
+        "Grosor del artículo desde la parte delantera hasta la trasera": "0",
+        "Altura del artículo desde la base hasta la parte superior": "0",
+        "Ancho del artículo de lado a lado": "0",
+        "Fecha de comienzo de la venta. (Vender en Amazon, ES)": "2026-01-20",
+        "Fecha de finalización de la venta. (Vender en Amazon, ES)": "2027-01-01"
     }
     match product_type:
         case "FLASHLIGHT":
@@ -209,11 +216,22 @@ def direct_map(csv_row, enrichment):
             formatted_entry["Unidad de altura del artículo"] = "Centímetros"
             formatted_entry["Unidad de grosor del artículo"] = "Centímetros"
             formatted_entry["Unidad del ancho del artículo"] = "Centímetros"
+            formatted_entry["Altura desde la base hasta la parte superior"] = "1"
+            formatted_entry["Longitud del borde horizontal más largo"] = "1"
+            formatted_entry["Ancho del borde horizontal más corto"] = "1"
         case "MAGNIFIER":
             formatted_entry["¿Es frágil?"] = "No"
             formatted_entry["Tamaño"] = "pequeño"
         case "CAMERA_TRIPOD":
             formatted_entry["Material"] = "Plástico"
+            formatted_entry["Unidad de grosor del artículo"] = "Centímetros"
+            formatted_entry["Unidad de altura del artículo"] = "Centímetros"
+            formatted_entry["Unidad del ancho del artículo"] = "Centímetros"
+            formatted_entry["Longitud Paquete"] = "1"
+            formatted_entry["Unidad de longitud del paquete"] = "Centímetros"
+            formatted_entry["Ancho Paquete"] = "1"
+            formatted_entry["Unidad de anchura del paquete"] = "Centímetros"
+            formatted_entry["Altura Paquete"] = "1"
         case "NAVIGATION_COMPASS":
             formatted_entry["Material"] = "Plástico"
             formatted_entry["Seguridad Juguetes Edad EU Advertencia"] = "Ninguna advertencia aplicable"
@@ -236,9 +254,31 @@ def direct_map(csv_row, enrichment):
             formatted_entry["Nombre del departamento"] = "Adultos unisex"
             formatted_entry["Advertencia No Requisito Edad EU DSJ"] = "Ninguna advertencia aplicable"
         case "TELESCOPE":
+            formatted_entry["Longitud Paquete"] = "1"
+            formatted_entry["Ancho Paquete"] = "1"
+            formatted_entry["Altura Paquete"] = "1"
+            formatted_entry["Unidad de longitud del paquete"] = "Centímetros"
+            formatted_entry["Unidad de anchura del paquete"] = "Centímetros"
             formatted_entry["Unidad de grosor del artículo"] = "Centímetros"
             formatted_entry["Unidad de altura del artículo"] = "Centímetros"
             formatted_entry["Unidad del ancho del artículo"] = "Centímetros"
+            formatted_entry["Aumento máximo"] = "0" if not formatted_entry["Aumento máximo"] else formatted_entry["Aumento máximo"]
+            formatted_entry["Distancia focal mínima"] = "0" if not formatted_entry["Distancia focal mínima"] else formatted_entry["Distancia focal mínima"]
+        case "BINOCULAR":
+            formatted_entry["Longitud Paquete"] = "1"
+            formatted_entry["Ancho Paquete"] = "1"
+            formatted_entry["Altura Paquete"] = "1"
+            formatted_entry["Unidad de longitud del artículo"] = "Centímetros"
+            formatted_entry["Unidad de longitud del paquete"] = "Centímetros"
+            formatted_entry["Unidad de anchura del paquete"] = "Centímetros"
+            formatted_entry["Unidad del ancho del artículo"] = "Centímetros"
+            formatted_entry["Longitud del artículo desde el borde más largo"] = "1"
+            formatted_entry["Ancho del artículo desde el borde más corto"] = "1"
+
+    if is_empty_or_zero(formatted_entry.get("Peso Artículo")):
+        formatted_entry["Peso Artículo"] = "1"
+    if is_empty_or_zero(formatted_entry.get("Peso del paquete")):
+        formatted_entry["Peso del paquete"] = "1"
 
     return formatted_entry
 
