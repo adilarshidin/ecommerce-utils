@@ -120,41 +120,33 @@ def direct_map(csv_row, enrichment):
     product_type = enrichment.get("product_type")
     match product_type:
         case "RANGEFINDER":
-            browse_node = "Bricolaje y herramientas > Herramientas manuales y eléctricas > Herramientas de medición y diseño > Herramientas para medición láser y accesorios > Telémetros láser (3053092031)"
+            browse_node = "Telémetros láser (3053092031)"
         case "CAMERA_TRIPOD":
-            browse_node = "Electrónica > Comunicación móvil y accesorios > Accesorios > Accesorios de foto y vídeo > Trípodes (21529596031)"
+            browse_node = "Trípodes y monopies (930892031)"
         case "MICROSCOPES":
-            browse_node = "Industria, empresas y ciencia > Artículos educativos > Recursos para planes de estudios > Ciencia > Microscopios > Microscopios monoculares (1443222031)"
+            browse_node = "Microscopios monoculares (1443222031)"
         case "AIMING_SCOPE_SIGHT":
-            browse_node = "Electrónica > Fotografía y videocámaras > Prismáticos, telescopios y óptica > Dispositivos de visión nocturna (930881031)"
+            browse_node = "Dispositivos de visión nocturna   (930881031)"
         case "MAGNIFIER":
-            browse_node = "Electrónica > Comunicación móvil y accesorios > Accesorios > Accesorios de juegos > Ampliadores y magnificadores de pantalla (21529576031)"
+            browse_node = "Lupas para lectura (4352920031)"
         case "TELESCOPE":
-            browse_node = "Electrónica > Fotografía y videocámaras > Prismáticos, telescopios y óptica > Monoculares (930884031)"
+            browse_node = "Monoculares (930884031)"
         case "BINOCULAR":
-            browse_node = "Electrónica > Fotografía y videocámaras > Prismáticos, telescopios y óptica > Prismáticos (930885031)"
+            browse_node = "Prismáticos (930885031)"
         case "FLASHLIGHT":
-            browse_node = "Bricolaje y herramientas > Ferretería > Linternas y faroles de mano > Linternas (3053011031)"
+            browse_node = "Linternas (3053011031)"
             size = "pequeño"
         case "NAVIGATION_COMPASS":
-            browse_node = "Deportes y aire libre > Electrónica y dispositivos > Brújulas (2928776031)"
+            browse_node = "Brújulas (2928776031)"
 
-    thickness_v, thickness_u = complete_dim(dims, "thickness")
-    height_v, height_u = complete_dim(dims, "height")
-    width_v, width_u = complete_dim(dims, "width")
-    length_v, length_u = complete_dim(dims, "length")
     min_fd_v, min_fd_u = complete_dim(dims, "min_focal_distance")
-    pkg_len_v, pkg_len_u = complete_dim(dims, "package_length")
-    pkg_w_v, pkg_w_u = complete_dim(dims, "package_width")
-    pkg_h_v, pkg_h_u = complete_dim(dims, "package_height")
-    pkg_weight_v, pkg_weight_u = complete_dim(dims, "package_weight")
 
     formatted_entry = {
         "SKU": csv_row.get("EAN"),
         "SKU principal": csv_row.get("EAN"),
         "ID del producto": csv_row.get("EAN"),
-        "Marca": csv_row.get("Marca"),
-        "Fabricante": "Konus",
+        "Marca": "Konus Italia Group S.R.L",
+        "Fabricante": "Konus Italia Group S.R.L",
         "Nombre Modelo": csv_row.get("Modelo"),
         "Numero de modelo": enrichment.get("model_number"),
         "Nombre del producto": csv_row.get("Título_producto"),
@@ -176,17 +168,18 @@ def direct_map(csv_row, enrichment):
         "Número de cajas": "1",
         "Componentes Incluidos": "1 artículo",
         "Numero de pieza": enrichment.get("part_number"),
-        "Peso Artículo": weight,
+        "Longitud Paquete": "1",
+        "Ancho Paquete": "1",
+        "Altura Paquete": "1",
+        "Unidad de anchura del paquete": "Centímetros",
+        "Unidad de longitud del paquete": "Centímetros",
+        "Peso Artículo": weight or "1",
         "Unidad de peso del artículo": "Gramos",
         "Tamaño del anillo": medidas,
         "Aumento máximo": dims.get("max_magnification"),
         "Distancia focal mínima": min_fd_v,
-        "Longitud Paquete": pkg_len_v,
-        "Ancho Paquete": pkg_w_v,
-        "Unidad de anchura del paquete": pkg_w_u,
-        "Altura Paquete": pkg_h_v,
         "Unidad de altura del paquete": "Centímetros",
-        "Peso del paquete": pkg_weight_v,
+        "Peso del paquete": "1",
         "Unidad del peso del paquete": "Kilogramos",
         "Garantía de Producto": "2",
         "¿Se necesitan baterías?": "No",
@@ -227,11 +220,6 @@ def direct_map(csv_row, enrichment):
             formatted_entry["Unidad de grosor del artículo"] = "Centímetros"
             formatted_entry["Unidad de altura del artículo"] = "Centímetros"
             formatted_entry["Unidad del ancho del artículo"] = "Centímetros"
-            formatted_entry["Longitud Paquete"] = "1"
-            formatted_entry["Unidad de longitud del paquete"] = "Centímetros"
-            formatted_entry["Ancho Paquete"] = "1"
-            formatted_entry["Unidad de anchura del paquete"] = "Centímetros"
-            formatted_entry["Altura Paquete"] = "1"
         case "NAVIGATION_COMPASS":
             formatted_entry["Material"] = "Plástico"
             formatted_entry["Seguridad Juguetes Edad EU Advertencia"] = "Ninguna advertencia aplicable"
@@ -254,31 +242,18 @@ def direct_map(csv_row, enrichment):
             formatted_entry["Nombre del departamento"] = "Adultos unisex"
             formatted_entry["Advertencia No Requisito Edad EU DSJ"] = "Ninguna advertencia aplicable"
         case "TELESCOPE":
-            formatted_entry["Longitud Paquete"] = "1"
-            formatted_entry["Ancho Paquete"] = "1"
-            formatted_entry["Altura Paquete"] = "1"
-            formatted_entry["Unidad de longitud del paquete"] = "Centímetros"
-            formatted_entry["Unidad de anchura del paquete"] = "Centímetros"
             formatted_entry["Unidad de grosor del artículo"] = "Centímetros"
             formatted_entry["Unidad de altura del artículo"] = "Centímetros"
             formatted_entry["Unidad del ancho del artículo"] = "Centímetros"
             formatted_entry["Aumento máximo"] = "0" if not formatted_entry["Aumento máximo"] else formatted_entry["Aumento máximo"]
             formatted_entry["Distancia focal mínima"] = "0" if not formatted_entry["Distancia focal mínima"] else formatted_entry["Distancia focal mínima"]
         case "BINOCULAR":
-            formatted_entry["Longitud Paquete"] = "1"
-            formatted_entry["Ancho Paquete"] = "1"
-            formatted_entry["Altura Paquete"] = "1"
             formatted_entry["Unidad de longitud del artículo"] = "Centímetros"
-            formatted_entry["Unidad de longitud del paquete"] = "Centímetros"
-            formatted_entry["Unidad de anchura del paquete"] = "Centímetros"
             formatted_entry["Unidad del ancho del artículo"] = "Centímetros"
             formatted_entry["Longitud del artículo desde el borde más largo"] = "1"
             formatted_entry["Ancho del artículo desde el borde más corto"] = "1"
-
-    if is_empty_or_zero(formatted_entry.get("Peso Artículo")):
-        formatted_entry["Peso Artículo"] = "1"
-    if is_empty_or_zero(formatted_entry.get("Peso del paquete")):
-        formatted_entry["Peso del paquete"] = "1"
+        case "MICROSCOPES":
+            formatted_entry["Unidad de longitud del artículo"] = "Centímetros"
 
     return formatted_entry
 
@@ -327,16 +302,8 @@ Return format:
   "model_number": "Number of the model or the name of the product if model can not be deduced",
   "part_number": "Can be product name but below 40 characters",
   "dimensions": {{
-    "thickness": {{ "value": number|null, "unit": "cm"|null }},
-    "height": {{ "value": number|null, "unit": "cm"|null }},
-    "width": {{ "value": number|null, "unit": "cm"|null }},
-    "length": {{ "value": number|null, "unit": "cm"|null }},
     "max_magnification": number|null,
     "min_focal_distance": {{ "value": number|null, "unit": "cm"|null }},
-    "package_length": {{ "value": number|null, "unit": "cm"|null }},
-    "package_width": {{ "value": number|null, "unit": "cm"|null }},
-    "package_height": {{ "value": number|null, "unit": "cm"|null }},
-    "package_weight": {{ "value": number|null, "unit": "kg"|null }}
   }}
 }}
 """
