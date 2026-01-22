@@ -10,8 +10,8 @@ from playwright.async_api import async_playwright, Page
 # =========================
 # FILES & PATHS
 # =========================
-INPUT_CSV = "output/all_listings_with_images.csv"
-OUTPUT_CSV = "output/all_listings_with_images_complete.csv"
+INPUT_CSV = "output/all_listings.csv"
+OUTPUT_CSV = "output/all_listings_with_images.csv"
 CHECKPOINT_CSV = "checkpoints/image_checkpoint.csv"
 IMAGE_DIR = "downloaded_images"
 
@@ -95,8 +95,8 @@ async def extract_all_images(page: Page) -> list[str]:
             if not thumb_src:
                 thumb_src = await thumb_img.get_attribute("src")
 
-            # FILTER OUT SMALL THUMBNAILS
-            if thumb_src and not re.search(r"(_US40_|_SX40_|_SS40_)", thumb_src) and thumb_src not in urls:
+            # FILTER OUT SMALL THUMBNAILS AND VIDEOS
+            if thumb_src and not re.search(r"(_US40_|_SX40_|_SS40_|_SR38,50_|_US100_|dp-play-icon-overlay|_SX38_SY50_CR|play-button-mb-image-grid-small_)", thumb_src) and thumb_src not in urls:
                 urls.append(thumb_src)
     except:
         pass
@@ -179,6 +179,7 @@ async def main():
         ]
 
         await asyncio.gather(*tasks)
+        print("All images downloaded and urls saved.")
 
 # =========================
 # RUN
