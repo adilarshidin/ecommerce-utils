@@ -126,6 +126,10 @@ missing = required_cols - set(df.columns)
 if missing:
     raise ValueError(f"Missing required CSV columns: {missing}")
 
+# Keep track of unmatched SKUs
+all_skus = set(df["seller-sku"].dropna())
+matched_skus_total = set()
+
 # =========================
 # PROCESS EACH XLSX
 # =========================
@@ -148,6 +152,8 @@ for xlsx_path in xlsx_files:
     if not matched_skus:
         print(f"⚠️ No matches for {filename}.xlsx")
         continue
+
+    matched_skus_total.update(matched_skus)
     total_skus_written += len(matched_skus)
     print(f"📦 Writing {len(matched_skus)} SKUs → {filename}.xlsx")
 
@@ -181,6 +187,15 @@ for xlsx_path in xlsx_files:
     # Save to output directory instead of overwriting input
     output_path = os.path.join(OUTPUT_DIR, os.path.basename(xlsx_path))
     wb.save(output_path)
+
+# =========================
+# REPORT UNMATCHED SKUS
+# =========================
+unmatched_skus = all_skus - matched_skus_total
+if unmatched_skus:
+    print(f"⚠️ {len(unmatched_skus)} SKUs were not processed:")
+    for sku in sorted(unmatched_skus):
+        print(f" - {sku}")
 
 print(f"✅ All applicable Worten sheets updated successfully in {OUTPUT_DIR}.")
 print(f"Total SKUs written: {total_skus_written}")
