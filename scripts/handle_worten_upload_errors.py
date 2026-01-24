@@ -16,7 +16,7 @@ client = Mistral(api_key=os.getenv("MISTRAL_API_TOKEN"))
 
 ERRORS_FILE = "input/worten_errors_bricolaje_y_construccion.xlsx"
 PRODUCTS_FILE = "output/worten/bricolaje_y_construccion.xlsx"
-OUTPUT_FILE = "output/worten/bricolaje_y_construccion_full.xlsx"  # Save as Excel
+OUTPUT_FILE = "output/worten/bricolaje_y_construccion_full.xlsx" 
 
 # =========================
 # Load Excel files
@@ -42,6 +42,15 @@ def get_image_urls(product_row: pd.Series) -> list[str]:
     image_cols = [c for c in product_row.index if c.startswith("image") and pd.notna(product_row[c])]
     return [product_row[c] for c in image_cols]
 
+def extract_error_fields(error_text: str) -> set[str]:
+    """
+    Extracts field names from Worten error messages like:
+    "2010|The attribute 'blade-length-cm' (...) must be an integer"
+    """
+    if not error_text:
+        return set()
+    return set(re.findall(r"'([^']+)'", str(error_text)))
+
 # =========================
 # Process each error
 # =========================
@@ -49,7 +58,8 @@ results = []
 
 for idx, err_row in errors_df.iterrows():
     product_id = err_row["product_id"]
-    missing_cols = [col.strip() for col in str(err_row["errors"]).split(",")]
+    error_fields = extract_error_fields(err_row["errors"])
+    missing_cols = list(error_fields)
 
     product_row = products_df[products_df["product_id"] == product_id]
     if product_row.empty:
@@ -60,46 +70,35 @@ for idx, err_row in errors_df.iterrows():
     images = get_image_urls(product_row.iloc[0])
     product_dict["images"] = images
 
-    instructions = (
-        "You are completing missing product data for Worten.\n"
-        f"Product data: {json.dumps(product_dict)}\n"
-        f"Missing columns: {missing_cols}\n\n"
+    instructions = (f"""
+You are completing missing or INVALID product data for Worten marketplace.
+Product data: {json.dumps(product_dict, ensure_ascii=False)}
+Fields to fix: {missing_cols}
 
-        "STRICT OUTPUT RULES:\n"
-        "- Return ONLY a JSON object.\n"
-        "- Keys MUST match the missing column names exactly.\n"
-        "- Values MUST be plain strings or numbers (NO objects, NO arrays).\n"
-        "- Do NOT include explanations, units outside the value, or extra text.\n"
-        "- Fill ONLY the missing fields.\n\n"
+STRICT OUTPUT RULES:
+- Return ONLY a JSON object.
+- Keys MUST match the field names exactly.
+- Values MUST be plain strings or numbers (NO objects, NO arrays).
+- Do NOT include explanations or extra text.
+- Fill ONLY the requested fields.
 
-        "COLUMN-SPECIFIC RULES (MANDATORY):\n"
+COLUMN-SPECIFIC RULES (MANDATORY):
 
-        "- If 'product-dimensions' is requested:\n"
-        "  - Return a SINGLE STRING in the exact format: LxWxH cm\n"
-        "  - Example: \"100x50x50 cm\"\n"
-        "  - Use lowercase 'x' and a space before 'cm'\n"
-        "  - Do NOT return objects or labels\n\n"
+- If 'product-dimensions' is requested:
+    - Format: LxWxH cm (example: "100x50x50 cm")
+    - Single string only
 
-        "- If 'blade-length-cm' is requested:\n"
-        "  - Return an INTEGER NUMBER ONLY\n"
-        "  - Do NOT include units\n"
-        "  - Do NOT include decimals\n"
-        "  - Example: 150\n\n"
+- If 'blade-length-cm' is requested:
+    - INTEGER number only
+    - No units, no decimals
 
-        "- If 'safety-system_pt_PT' is requested:\n"
-        "  - Return EXACTLY ONE of the following values (case-sensitive):\n"
-        "    Sim\n"
-        "    Não\n"
-        "    Sí\n"
-        "    Si\n"
-        "    No\n"
-        "    Não Aplicável\n"
-        "    No aplicable\n"
-        "    No Aplicable\n"
-        "  - Do NOT return any other value\n"
-        "  - Do NOT explain or translate\n"
-    )
+- If 'safety-system_pt_PT' is requested:
+    - Return EXACTLY ONE of:
+    Sim | Não | Sí | Si | No | Não Aplicável | No aplicable | No Aplicable
 
+- If 'product_name_pt_PT' or 'product_name_es_ES' is requested:
+    - Return the product name with MAXIMUM of 150 characters.
+""")
 
     message_content = [{"type": "text", "text": instructions}]
     for img_url in images:
@@ -119,8 +118,32 @@ for idx, err_row in errors_df.iterrows():
             print(f"⚠ No valid JSON returned for product {product_id}")
             continue
 
-        output_row = {**product_dict, **missing_values}
+        if "mp_category" in missing_values:
+            if not missing_values["mp_category"].startswith("Bricolaje y Construcción/"):
+                print(f"⚠ Invalid category root for product {product_id}")
+                continue
+
+        if "blade-length-cm" in missing_values:
+            if not isinstance(missing_values["blade-length-cm"], int):
+                print(f"⚠ Invalid blade-length-cm for product {product_id}")
+                continue
+
+        if "safety-system_pt_PT" in missing_values:
+            allowed = {
+                "Sim", "Não", "Sí", "Si", "No",
+                "Não Aplicável", "No aplicable", "No Aplicable"
+            }
+            if missing_values["safety-system_pt_PT"] not in allowed:
+                print(f"⚠ Invalid safety-system_pt_PT for product {product_id}")
+                continue
+
+        output_row = {
+            **product_dict,
+            **missing_values,
+            "__error_fields__": error_fields
+        }
         results.append(output_row)
+
         print(f"✅ Processed product {product_id}")
 
     except Exception as e:
@@ -178,8 +201,13 @@ while ws.cell(row=row, column=col_index[ANCHOR_COLUMN]).value:
 
         cell = ws.cell(row=row, column=col_index[field])
 
-        # Only write if empty in template
-        if cell.value in (None, "", "nan"):
+        error_fields = result.get("__error_fields__", set())
+
+        if field in error_fields:
+            # Force rewrite for errored fields
+            cell.value = value
+        elif cell.value in (None, "", "nan"):
+            # Normal first-pass fill
             cell.value = value
 
     updated += 1
