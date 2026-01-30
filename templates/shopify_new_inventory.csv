@@ -1,0 +1,11 @@
+Handle,Title,Option1 Name,Option1 Value,Option2 Name,Option2 Value,Option3 Name,Option3 Value,SKU,HS Code,COO,Location,Bin name,Incoming (not editable),Unavailable (not editable),Committed (not editable),Available (not editable),On hand (current),On hand (new)
+custard-buns,Custard Buns with Filling,Size,Medium,Filling,Custard,,,,,,123 William Street,A1-01-001,0,0,1,7,8,
+custard-buns,Custard Buns with Filling,Size,Large,Filling,Custard,,,,,,123 William Street,A1-01-002,0,0,0,8,8,
+butterfly-ginkgo-bowl,Butterfly Ginkgo Decorative Bowl,Material,Metallic,Style,Butterfly Ginkgo,,,17575MA,,,123 William Street,,0,0,0,80,80,
+maple-syrup,Organic Maple Syrup,Volume,500ml,Grade,Amber,,,,987654,123456,123 William Street,A1-03-001,0,0,0,50,50,
+maple-syrup,Organic Maple Syrup,Volume,1000ml,Grade,Dark,,,,987655,123457,123 William Street,A1-03-002,0,0,0,30,30,
+stainless-steel-bottle,Insulated Bottle,Size,500ml,Finish,Matte,Color,Black,SSB500BLK,,,123 William Street,A1-04-001,0,0,0,120,120,
+stainless-steel-bottle,Insulated Bottle,Size,750ml,Finish,Gloss,Color,Silver,SSB750SLV,,,123 William Street,A1-04-002,0,0,0,90,90,
+yoga-mat,Premium Yoga Mat,Thickness,5mm,Material,Natural Rubber,Color,Purple,PMY5PRP,,,123 William Street,A1-05-001,0,0,0,70,70,
+yoga-mat,Premium Yoga Mat,Thickness,3mm,Material,TPE,Color,Green,PMY3GRN,,,123 William Street,A1-05-002,0,0,0,85,85,
+ceramic-vase,Artisan Ceramic Vase,Height,25cm,Pattern,Geometric,Color,Blue,CV25GEO,,,123 William Street,A1-06-001,0,0,0,45,45,
