@@ -1,8 +1,8 @@
 import pandas as pd
 
 # Input and output file paths
-input_file = "output/konus_amazon_ready.xlsx"  # replace with your .xlsx file path
-output_file = "output/konus_amazon_ready.tsv"  # desired output .tsv file path
+input_file = "output/Flat.File.PriceInventory.es.xlsx"
+output_file = "output/Flat.File.PriceInventory.es.tsv"
 
 # Read the Excel file
 df = pd.read_excel(input_file)
